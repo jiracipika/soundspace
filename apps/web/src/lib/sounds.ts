@@ -1,0 +1,103 @@
+import type { Sound } from './types';
+
+export const SOUNDS: Sound[] = [
+  {
+    id: 'rain',
+    name: 'Rain',
+    emoji: '🌧️',
+    gradientFrom: '#5AC8FA',
+    gradientTo: '#0A84FF',
+    category: 'nature',
+  },
+  {
+    id: 'thunder',
+    name: 'Thunder',
+    emoji: '⛈️',
+    gradientFrom: '#8B5CF6',
+    gradientTo: '#3B1F8C',
+    category: 'nature',
+  },
+  {
+    id: 'fire',
+    name: 'Fire',
+    emoji: '🔥',
+    gradientFrom: '#FF9500',
+    gradientTo: '#FF2D55',
+    category: 'nature',
+  },
+  {
+    id: 'wind',
+    name: 'Wind',
+    emoji: '🌬️',
+    gradientFrom: '#34C759',
+    gradientTo: '#007AFF',
+    category: 'nature',
+  },
+  {
+    id: 'birds',
+    name: 'Birds',
+    emoji: '🐦',
+    gradientFrom: '#FFD60A',
+    gradientTo: '#FF9500',
+    category: 'nature',
+  },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    emoji: '🌊',
+    gradientFrom: '#0A84FF',
+    gradientTo: '#00C7BE',
+    category: 'nature',
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    emoji: '🌲',
+    gradientFrom: '#30D158',
+    gradientTo: '#009F41',
+    category: 'nature',
+  },
+  {
+    id: 'coffee',
+    name: 'Coffee Shop',
+    emoji: '☕',
+    gradientFrom: '#C6956B',
+    gradientTo: '#8E5E3D',
+    category: 'urban',
+  },
+  {
+    id: 'white',
+    name: 'White Noise',
+    emoji: '〰️',
+    gradientFrom: '#AEAEB2',
+    gradientTo: '#636366',
+    category: 'noise',
+  },
+  {
+    id: 'brown',
+    name: 'Brown Noise',
+    emoji: '🟤',
+    gradientFrom: '#AC8E68',
+    gradientTo: '#6B4226',
+    category: 'noise',
+  },
+  {
+    id: 'piano',
+    name: 'Piano',
+    emoji: '🎹',
+    gradientFrom: '#AF52DE',
+    gradientTo: '#5E5CE6',
+    category: 'music',
+  },
+  {
+    id: 'city',
+    name: 'City Night',
+    emoji: '🌃',
+    gradientFrom: '#FF6B35',
+    gradientTo: '#2C1654',
+    category: 'urban',
+  },
+];
+
+export const getSoundById = (id: string): Sound | undefined =>
+  SOUNDS.find((s) => s.id === id);
