@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "SoundSpace",
+    "slug": "soundspace",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "soundspace",
+    "userInterfaceStyle": "automatic",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.soundspace.app" },
+    "android": { "adaptiveIcon": { "backgroundColor": "#1a1a2e" }, "package": "com.soundspace.app" },
+    "plugins": ["expo-router", "expo-av"],
+    "scheme": null
+  }
+}
