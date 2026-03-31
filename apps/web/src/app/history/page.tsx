@@ -1,71 +1,143 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_HISTORY } from '../../lib/mock-data';
+import { getHistory, type HistoryEntry } from '../../lib/storage';
 import { getSoundById } from '../../lib/sounds';
 
-export default function History() {
-  const totalMin = Math.round(MOCK_HISTORY.reduce((s, h) => s + h.duration, 0) / 60);
-  const topSoundId = MOCK_HISTORY.flatMap(h => h.mix.map(m => m.soundId))
-    .sort((a, b) =>
-      MOCK_HISTORY.flatMap(h => h.mix.map(m => m.soundId)).filter(v => v === a).length -
-      MOCK_HISTORY.flatMap(h => h.mix.map(m => m.soundId)).filter(v => v === b).length
-    ).pop();
-  const topSound = topSoundId ? getSoundById(topSoundId) : null;
+function formatDuration(seconds: number): string {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  if (hrs > 0) return `${hrs}h ${mins}m`;
+  if (mins > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
+}
 
-  const formatTime = (ts: number) => {
-    const diff = Date.now() - ts;
-    const hrs = Math.floor(diff / 3600000);
-    if (hrs < 1) return 'Just now';
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+export default function HistoryPage() {
+  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEntries(getHistory());
+  }, []);
+
+  const clearHistory = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('soundspace_history');
+      setEntries([]);
+    }
   };
 
   return (
-    <div style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '60px 16px 40px' }}>
-        <Link href="/" style={{ fontSize: 14, color: 'var(--ios-blue)', marginBottom: 8, display: 'inline-block' }}>Back</Link>
-        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 4 }}>History</h1>
-        <p style={{ fontSize: 15, color: 'var(--ios-label3)', marginBottom: 24 }}>Listening insights and session stats.</p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-          <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ios-label3)', marginBottom: 4 }}>Total Listening</div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{Math.round(totalMin / 60)}h {totalMin % 60}m</div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-950 via-indigo-950 to-slate-950 text-white">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-white/60 hover:text-white transition-colors">
+              ← Back
+            </Link>
           </div>
-          <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ios-label3)', marginBottom: 4 }}>Sessions</div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{MOCK_HISTORY.length}</div>
-          </div>
-          <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ios-label3)', marginBottom: 4 }}>Favorite Sound</div>
-            <div style={{ fontSize: 24 }}>{topSound ? `${topSound.emoji} ${topSound.name}` : '—'}</div>
-          </div>
-          <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ios-label3)', marginBottom: 4 }}>Streak</div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>5 days 🔥</div>
-          </div>
+          <h1 className="text-2xl font-bold">🎧 History</h1>
+          {entries.length > 0 && (
+            <button
+              onClick={clearHistory}
+              className="text-sm text-red-400/70 hover:text-red-400 transition-colors"
+            >
+              Clear All
+            </button>
+          )}
         </div>
 
-        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Recent Sessions</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {MOCK_HISTORY.map(session => {
-            const firstSound = session.mix[0] ? getSoundById(session.mix[0].soundId) : null;
-            return (
-              <div key={session.id} style={{ padding: 14, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', display: 'flex', alignItems: 'center', gap: 14 }}>
-                {firstSound && (
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${firstSound.gradientFrom}, ${firstSound.gradientTo})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                    {firstSound.emoji}
+        {entries.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">🎵</div>
+            <p className="text-white/40 text-lg">No sessions yet</p>
+            <p className="text-white/30 text-sm mt-2">Your mixing sessions will appear here</p>
+            <Link
+              href="/mixer"
+              className="inline-block mt-6 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              Start Mixing
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {entries.map((entry) => {
+              const sounds = entry.mix
+                .map((m) => getSoundById(m.soundId))
+                .filter(Boolean);
+              const isSelected = selected === entry.id;
+
+              return (
+                <div
+                  key={entry.id}
+                  onClick={() => setSelected(isSelected ? null : entry.id)}
+                  className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 cursor-pointer hover:bg-white/10 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{entry.presetName || 'Custom Mix'}</p>
+                      <p className="text-sm text-white/40 mt-1">
+                        {sounds.map((s) => s!.emoji).join(' ')} · {formatDuration(entry.duration)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-white/50">{timeAgo(entry.endedAt)}</p>
+                      <div className="flex gap-1 mt-1 justify-end">
+                        {entry.mix.slice(0, 5).map((m) => {
+                          const sound = getSoundById(m.soundId);
+                          return (
+                            <div
+                              key={m.soundId}
+                              className="w-6 h-1.5 rounded-full bg-purple-400/60"
+                              style={{ width: `${Math.max(8, m.volume * 24)}px` }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ios-label)' }}>{session.presetName || 'Custom Mix'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ios-label3)' }}>{session.mix.length} sounds &middot; {Math.round(session.duration / 60)} min &middot; {formatTime(session.startedAt)}</div>
+
+                  {isSelected && (
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                      {entry.mix.map((m) => {
+                        const sound = getSoundById(m.soundId);
+                        if (!sound) return null;
+                        return (
+                          <div key={m.soundId} className="flex items-center gap-3 text-sm">
+                            <span>{sound.emoji}</span>
+                            <span className="text-white/70">{sound.name}</span>
+                            <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-purple-400 rounded-full"
+                                style={{ width: `${m.volume * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-white/40 w-8 text-right">
+                              {Math.round(m.volume * 100)}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ios-blue)' }}>{Math.round(session.duration / 60)}m</div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
