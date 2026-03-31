@@ -68,7 +68,7 @@ export default function Timer() {
             background: running ? 'var(--ios-red)' : 'var(--ios-green)', color: '#fff',
           }}>{running ? 'Stop' : 'Start'}</button>
           <button onClick={reset} style={{
-            padding: '14px 24px', borderRadius: 14, fontSize: 16, fontWeight: 600, border: '1px solid var(--ios-separator)', cursor: 'pointer',
+            padding: '14px 24px', borderRadius: 14, fontSize: 16, fontWeight: 600, border: '1px solid var(--ios-sep)', cursor: 'pointer',
             background: 'var(--ios-bg2)', color: 'var(--ios-label)',
           }}>Reset</button>
         </div>

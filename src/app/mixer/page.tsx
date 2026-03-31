@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { SOUNDS, getSoundById } from '../../lib/sounds';
-import { saveMix, type Preset, type MixEntry } from '../../lib/storage';
+import { savePreset, type Preset } from '../../lib/storage';
+import type { MixEntry } from '../../lib/types';
 
 export default function Mixer() {
   const [active, setActive] = useState<Record<string, number>>({});
@@ -25,7 +26,7 @@ export default function Mixer() {
   const handleSave = () => {
     if (!saveName.trim()) return;
     const mix: MixEntry[] = Object.entries(active).map(([soundId, volume]) => ({ soundId, volume }));
-    saveMix({ id: `preset-${Date.now()}`, name: saveName, description: 'Custom preset', mix, tags: ['custom'], createdAt: Date.now(), isCommunity: false, author: 'you', playCount: 0 });
+    savePreset({ id: `preset-${Date.now()}`, name: saveName, description: 'Custom preset', mix, tags: ['custom'], createdAt: Date.now(), isCommunity: false, author: 'you', playCount: 0 });
     setShowSave(false);
     setSaveName('');
   };
@@ -43,14 +44,14 @@ export default function Mixer() {
           </div>
           <button onClick={() => setShowSave(true)} disabled={activeSounds.length === 0} style={{
             padding: '10px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
-            background: activeSounds.length ? 'var(--ios-blue)' : 'var(--ios-separator)', color: activeSounds.length ? '#fff' : 'var(--ios-label3)',
+            background: activeSounds.length ? 'var(--ios-blue)' : 'var(--ios-sep)', color: activeSounds.length ? '#fff' : 'var(--ios-label3)',
           }}>Save Mix</button>
         </div>
 
         {showSave && (
           <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20, display: 'flex', gap: 8 }}>
             <input type="text" value={saveName} onChange={e => setSaveName(e.target.value)} placeholder="Preset name..." style={{
-              flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--ios-separator)', fontSize: 14, background: 'var(--ios-bg)', color: 'var(--ios-label)',
+              flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--ios-sep)', fontSize: 14, background: 'var(--ios-bg)', color: 'var(--ios-label)',
             }} />
             <button onClick={handleSave} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'var(--ios-green)', color: '#fff' }}>Save</button>
           </div>

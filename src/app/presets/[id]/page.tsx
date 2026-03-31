@@ -40,7 +40,7 @@ export default function PresetDetail({ params }: { params: { id: string } }) {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={{ flex: 1, padding: 14, borderRadius: 12, fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'var(--ios-blue)', color: '#fff' }}>▶ Play Mix</button>
-          <button style={{ padding: 14, borderRadius: 12, fontSize: 15, fontWeight: 600, border: '1px solid var(--ios-separator)', cursor: 'pointer', background: 'var(--ios-bg2)', color: 'var(--ios-label)' }}>Edit</button>
+          <button style={{ padding: 14, borderRadius: 12, fontSize: 15, fontWeight: 600, border: '1px solid var(--ios-sep)', cursor: 'pointer', background: 'var(--ios-bg2)', color: 'var(--ios-label)' }}>Edit</button>
         </div>
       </div>
     </div>

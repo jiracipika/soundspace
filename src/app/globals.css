@@ -117,3 +117,57 @@ input[type='range']::-moz-range-thumb {
 .animate-float { animation: float 4s ease-in-out infinite; }
 .animate-pulse-slow { animation: pulse 3s ease-in-out infinite; }
 .animate-glow { animation: glow 3s ease-in-out infinite; }
+
+/* ── Button base ─────────────────────────────────────────────────── */
+button {
+  transition: opacity 0.15s ease, transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+button:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+button:active:not(:disabled) { opacity: 1; transform: scale(0.97); }
+button:focus-visible {
+  outline: 2px solid var(--ios-blue);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Link cards ──────────────────────────────────────────────────── */
+a[href] {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+a[href]:hover { opacity: 0.85; }
+a[href]:active { transform: scale(0.98); }
+
+/* ── Input text ──────────────────────────────────────────────────── */
+input[type='text'], input[type='search'] {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input[type='text']:focus, input[type='search']:focus {
+  outline: none;
+  border-color: var(--ios-blue) !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+}
+
+/* ── Typography helpers ──────────────────────────────────────────── */
+.text-display {
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+.text-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+.text-body {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ios-label2);
+}
+.text-caption {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ios-label3);
+}

@@ -22,7 +22,7 @@ export default function Landing() {
         <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-1px', position: 'relative', marginBottom: 8 }}>
           Soundspace
         </h1>
-        <p style={{ fontSize: 16, color: '#fff99', position: 'relative', maxWidth: 400, margin: '0 auto 28px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', position: 'relative', maxWidth: 400, margin: '0 auto 28px', lineHeight: 1.5 }}>
           Ambient sounds for deep focus
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', position: 'relative' }}>
