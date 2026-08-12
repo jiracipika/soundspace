@@ -2,10 +2,10 @@
 import Link from 'next/link';
 
 const FEATURES = [
-  { label: 'Sound Mixer', href: '/mixer', icon: '✨', desc: 'Sound Mixer feature coming soon' },
-  { label: 'Presets', href: '/presets', icon: '✨', desc: 'Presets feature coming soon' },
-  { label: 'Preset Detail', href: '/presets', icon: '✨', desc: 'Preset Detail feature coming soon' },
-  { label: 'Focus Timer', href: '/timer', icon: '✨', desc: 'Focus Timer feature coming soon' }
+  { label: 'Sound Mixer', href: '/mixer', icon: '🎛️', desc: 'Mix ambient sounds with individual volume control' },
+  { label: 'Presets', href: '/presets', icon: '📋', desc: 'Browse and save your favorite sound combinations' },
+  { label: 'Focus Timer', href: '/timer', icon: '⏱️', desc: 'Pomodoro timer with visual progress ring' },
+  { label: 'History', href: '/history', icon: '📊', desc: 'Track your focus sessions over time' },
 ];
 
 export default function Landing() {

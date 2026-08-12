@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
 const TIMER_PRESETS = [
@@ -12,21 +12,54 @@ const TIMER_PRESETS = [
 
 export default function Timer() {
   const [minutes, setMinutes] = useState(25);
-  const [seconds, setSeconds] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [totalSeconds, setTotalSeconds] = useState(25 * 60);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const toggle = () => {
-    if (!running) { setTotalSeconds(minutes * 60); setSeconds(0); }
-    setRunning(!running);
-  };
+  const remaining = Math.max(0, totalSeconds - elapsed);
+  const progress = totalSeconds > 0 ? Math.min(1, elapsed / totalSeconds) : 0;
+  const displayMin = Math.floor(remaining / 60);
+  const displaySec = remaining % 60;
 
-  const reset = () => { setRunning(false); setSeconds(0); setTotalSeconds(minutes * 60); };
+  // Tick
+  useEffect(() => {
+    if (!running) return;
+    intervalRef.current = setInterval(() => {
+      setElapsed(prev => {
+        if (prev + 1 >= totalSeconds) {
+          setRunning(false);
+          return totalSeconds;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [running, totalSeconds]);
 
-  const elapsed = totalSeconds - (running ? seconds : 0);
-  const progress = totalSeconds > 0 ? (elapsed / totalSeconds) : 0;
-  const displayMin = Math.floor(elapsed / 60);
-  const displaySec = elapsed % 60;
+  const toggle = useCallback(() => {
+    setRunning(prev => {
+      if (!prev) {
+        // Starting: reset elapsed if we were at the end
+        setElapsed(cur => cur >= totalSeconds ? 0 : cur);
+      }
+      return !prev;
+    });
+  }, [totalSeconds]);
+
+  const reset = useCallback(() => {
+    setRunning(false);
+    setElapsed(0);
+  }, []);
+
+  const selectPreset = useCallback((m: number) => {
+    setRunning(false);
+    setMinutes(m);
+    setTotalSeconds(m * 60);
+    setElapsed(0);
+  }, []);
 
   return (
     <div style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
@@ -36,7 +69,7 @@ export default function Timer() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 8, marginBottom: 32 }}>
           {TIMER_PRESETS.map(p => (
-            <button key={p.label} onClick={() => { setMinutes(p.minutes); setSeconds(0); setTotalSeconds(p.minutes * 60); setRunning(false); }} style={{
+            <button key={p.label} onClick={() => selectPreset(p.minutes)} style={{
               padding: 14, borderRadius: 14, fontSize: 13, fontWeight: 600, border: minutes === p.minutes ? '2px solid var(--ios-blue)' : 'none', cursor: 'pointer',
               background: minutes === p.minutes ? 'rgba(0,122,255,0.08)' : 'var(--ios-bg2)', color: minutes === p.minutes ? 'var(--ios-blue)' : 'var(--ios-label2)',
             }}>
@@ -66,7 +99,7 @@ export default function Timer() {
           <button onClick={toggle} style={{
             padding: '14px 40px', borderRadius: 14, fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer',
             background: running ? 'var(--ios-red)' : 'var(--ios-green)', color: '#fff',
-          }}>{running ? 'Stop' : 'Start'}</button>
+          }}>{running ? 'Pause' : 'Start'}</button>
           <button onClick={reset} style={{
             padding: '14px 24px', borderRadius: 14, fontSize: 16, fontWeight: 600, border: '1px solid var(--ios-sep)', cursor: 'pointer',
             background: 'var(--ios-bg2)', color: 'var(--ios-label)',

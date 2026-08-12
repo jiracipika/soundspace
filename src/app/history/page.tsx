@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getHistory, type HistoryEntry } from '../../lib/storage';
+import { getHistory } from '../../lib/storage';
+import type { HistoryEntry } from '../../lib/types';
 import { getSoundById } from '../../lib/sounds';
 
 function formatDuration(seconds: number): string {

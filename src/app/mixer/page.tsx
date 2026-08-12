@@ -2,7 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { SOUNDS, getSoundById } from '../../lib/sounds';
-import { savePreset, type Preset } from '../../lib/storage';
+import { savePreset, addHistoryEntry } from '../../lib/storage';
+import type { Preset } from '../../lib/types';
+import { getAudioEngine } from '../../lib/audio-engine';
 import type { MixEntry } from '../../lib/types';
 
 export default function Mixer() {
@@ -10,28 +12,91 @@ export default function Mixer() {
   const [master, setMaster] = useState(0.8);
   const [saveName, setSaveName] = useState('');
   const [showSave, setShowSave] = useState(false);
+  const [sessionStart, setSessionStart] = useState<number | null>(null);
 
-  const toggle = (id: string) => {
+  // Wire master volume to audio engine
+  useEffect(() => {
+    const engine = getAudioEngine();
+    engine.setMasterVolume(master);
+  }, [master]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      const engine = getAudioEngine();
+      engine.stopAll();
+    };
+  }, []);
+
+  const toggle = useCallback((id: string) => {
+    const engine = getAudioEngine();
     setActive(prev => {
       const next = { ...prev };
-      if (next[id] !== undefined) { delete next[id]; } else { next[id] = 0.6; }
+      if (next[id] !== undefined) {
+        delete next[id];
+        engine.stop(id);
+      } else {
+        next[id] = 0.6;
+        engine.start(id, 0.6);
+      }
       return next;
     });
-  };
+    // Track session start
+    setSessionStart(prev => {
+      const hasActive = Object.keys(active).length > 0 || nextHasActive;
+      return prev ?? Date.now();
+    });
+  }, []);
 
-  const setVolume = (id: string, vol: number) => {
+  // Helper to check if any sound is active after toggle
+  const nextHasActive = true; // simplified; active state tracks this
+
+  const setVolume = useCallback((id: string, vol: number) => {
+    const engine = getAudioEngine();
+    engine.setVolume(id, vol);
     setActive(prev => ({ ...prev, [id]: vol }));
-  };
+  }, []);
 
   const handleSave = () => {
     if (!saveName.trim()) return;
     const mix: MixEntry[] = Object.entries(active).map(([soundId, volume]) => ({ soundId, volume }));
-    savePreset({ id: `preset-${Date.now()}`, name: saveName, description: 'Custom preset', mix, tags: ['custom'], createdAt: Date.now(), isCommunity: false, author: 'you', playCount: 0 });
+    const preset: Preset = {
+      id: `preset-${Date.now()}`,
+      name: saveName,
+      description: 'Custom preset',
+      mix,
+      tags: ['custom'],
+      createdAt: Date.now(),
+      isCommunity: false,
+      author: 'you',
+      playCount: 0,
+    };
+    savePreset(preset);
     setShowSave(false);
     setSaveName('');
   };
 
+  // Log session to history when all sounds stop
   const activeSounds = Object.keys(active);
+
+  const stopAll = () => {
+    const engine = getAudioEngine();
+    engine.stopAll();
+    // Record history if we had a session
+    if (sessionStart && activeSounds.length > 0) {
+      const mix: MixEntry[] = Object.entries(active).map(([soundId, volume]) => ({ soundId, volume }));
+      addHistoryEntry({
+        id: `h-${Date.now()}`,
+        presetName: 'Custom Mix',
+        mix,
+        duration: Math.round((Date.now() - sessionStart) / 1000),
+        startedAt: sessionStart,
+        endedAt: Date.now(),
+      });
+    }
+    setActive({});
+    setSessionStart(null);
+  };
 
   return (
     <div style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
@@ -42,17 +107,25 @@ export default function Mixer() {
             <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.5px' }}>Mixer</h1>
             <p style={{ fontSize: 15, color: 'var(--ios-label3)' }}>{activeSounds.length} sounds active</p>
           </div>
-          <button onClick={() => setShowSave(true)} disabled={activeSounds.length === 0} style={{
-            padding: '10px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
-            background: activeSounds.length ? 'var(--ios-blue)' : 'var(--ios-sep)', color: activeSounds.length ? '#fff' : 'var(--ios-label3)',
-          }}>Save Mix</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {activeSounds.length > 0 && (
+              <button onClick={stopAll} style={{
+                padding: '10px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
+                background: 'var(--ios-red)', color: '#fff',
+              }}>Stop All</button>
+            )}
+            <button onClick={() => setShowSave(true)} disabled={activeSounds.length === 0} style={{
+              padding: '10px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
+              background: activeSounds.length ? 'var(--ios-blue)' : 'var(--ios-sep)', color: activeSounds.length ? '#fff' : 'var(--ios-label3)',
+            }}>Save Mix</button>
+          </div>
         </div>
 
         {showSave && (
           <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20, display: 'flex', gap: 8 }}>
-            <input type="text" value={saveName} onChange={e => setSaveName(e.target.value)} placeholder="Preset name..." style={{
+            <input type="text" value={saveName} onChange={e => setSaveName(e.target.value)} placeholder="Preset name..." onKeyDown={e => { if (e.key === 'Enter') handleSave(); }} style={{
               flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--ios-sep)', fontSize: 14, background: 'var(--ios-bg)', color: 'var(--ios-label)',
-            }} />
+              }} autoFocus aria-label="Preset name" />
             <button onClick={handleSave} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'var(--ios-green)', color: '#fff' }}>Save</button>
           </div>
         )}
@@ -63,7 +136,7 @@ export default function Mixer() {
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ios-label2)' }}>Master Volume</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ios-blue)' }}>{Math.round(master * 100)}%</span>
           </div>
-          <input type="range" min={0} max={1} step={0.01} value={master} onChange={e => setMaster(+e.target.value)} style={{ width: '100%' }} />
+          <input type="range" min={0} max={1} step={0.01} value={master} onChange={e => setMaster(+e.target.value)} style={{ width: '100%' }} aria-label="Master volume" />
         </div>
 
         {/* Sound grid */}
@@ -87,7 +160,7 @@ export default function Mixer() {
                   }}>
                     {sound.emoji}
                   </div>
-                  <button onClick={() => toggle(sound.id)} style={{
+                  <button onClick={() => toggle(sound.id)} aria-label={isActive ? `Stop ${sound.name}` : `Play ${sound.name}`} style={{
                     width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
                     background: isActive ? 'var(--ios-blue)' : 'var(--ios-bg)', color: isActive ? '#fff' : 'var(--ios-label3)',
                     fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -100,7 +173,7 @@ export default function Mixer() {
                       <span style={{ fontSize: 11, color: 'var(--ios-label3)' }}>Volume</span>
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ios-blue)' }}>{Math.round(volume * 100)}%</span>
                     </div>
-                    <input type="range" min={0} max={1} step={0.01} value={volume} onChange={e => setVolume(sound.id, +e.target.value)} style={{ width: '100%' }} />
+                    <input type="range" min={0} max={1} step={0.01} value={volume} onChange={e => setVolume(sound.id, +e.target.value)} style={{ width: '100%' }} aria-label={`${sound.name} volume`} />
                   </div>
                 )}
               </div>
