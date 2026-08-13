@@ -171,3 +171,39 @@ input[type='text']:focus, input[type='search']:focus {
   line-height: 1.4;
   color: var(--ios-label3);
 }
+
+
+/* ============================================================
+   PAGE TRANSITIONS & SCROLL POLISH
+   ============================================================ */
+
+@keyframes soundspace-slide-in-right {
+  0% { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes soundspace-slide-in-left {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.soundspace-enter-right { animation: soundspace-slide-in-right 0.38s cubic-bezier(0.22,1,0.36,1) both; }
+.soundspace-enter-left { animation: soundspace-slide-in-left 0.38s cubic-bezier(0.22,1,0.36,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .soundspace-enter-right, .soundspace-enter-left {
+    animation: none;
+  }
+}
+
+html {
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  transition: box-shadow 120ms ease-out, outline-color 120ms ease-out;
+}
