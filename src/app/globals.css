@@ -4,10 +4,10 @@
 
 :root {
   --ios-bg: #0A0A0F;
-  --ios-bg2: #16161E;
-  --ios-bg3: #1E1E28;
-  --ios-card: rgba(255,255,255,0.04);
-  --ios-card-hover: rgba(255,255,255,0.07);
+  --ios-bg2: #1c1c2e;
+  --ios-bg3: #1c1c2e;
+  --ios-card: #1c1c2e;
+  --ios-card-hover: #252540;
   --ios-label: #FFFFFF;
   --ios-label2: rgba(255,255,255,0.75);
   --ios-label3: rgba(255,255,255,0.45);
