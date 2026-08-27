@@ -1,12 +1,77 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSoundById } from '../../../lib/sounds';
+import { getPresetById } from '../../../lib/storage';
 import { COMMUNITY_PRESETS } from '../../../lib/mock-data';
+import { getSoundById } from '../../../lib/sounds';
+import type { Preset } from '../../../lib/types';
 
-export default function PresetDetail({ params }: { params: { id: string } }) {
-  const preset = COMMUNITY_PRESETS.find(p => p.id === params.id);
-  if (!preset) return <div style={{ padding: 60, textAlign: 'center', color: 'var(--ios-label3)' }}>Preset not found</div>;
+export default function PresetDetail() {
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? '';
+  const [preset, setPreset] = useState<Preset | null | undefined>(undefined);
+  const [playing, setPlaying] = useState(false);
+
+  // Look in saved presets first, then community. The previous version only
+  // searched COMMUNITY_PRESETS, so saved mixes 404'd on their detail page.
+  useEffect(() => {
+    if (!id) {
+      setPreset(null);
+      return;
+    }
+    const fromStorage = getPresetById(id);
+    const fromCommunity = COMMUNITY_PRESETS.find((p) => p.id === id);
+    setPreset(fromStorage ?? fromCommunity ?? null);
+  }, [id]);
+
+  if (preset === undefined) {
+    return <div style={{ padding: 60, textAlign: 'center', color: 'var(--ios-label3)' }}>Loading…</div>;
+  }
+
+  if (!preset) {
+    return (
+      <div style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '60px 16px 40px' }}>
+          <Link href="/presets" style={{ fontSize: 14, color: 'var(--ios-blue)', display: 'inline-block', marginBottom: 24 }}>← Presets</Link>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ios-label)' }}>Preset not found</h1>
+          <p style={{ fontSize: 14, color: 'var(--ios-label3)', marginTop: 8 }}>
+            This preset may have been deleted on this device.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const togglePlay = () => {
+    if (playing) {
+      import('../../../lib/audio-engine').then(({ getAudioEngine }) => {
+        getAudioEngine().stopAll();
+        setPlaying(false);
+      });
+    } else {
+      import('../../../lib/audio-engine').then(({ getAudioEngine }) => {
+        const engine = getAudioEngine();
+        for (const entry of preset.mix) {
+          engine.start(entry.soundId, entry.volume);
+        }
+        setPlaying(true);
+      });
+    }
+  };
+
+  const removeIfCustom = () => {
+    if (preset.isCommunity) return;
+    try {
+      const raw = localStorage.getItem('soundspace_presets');
+      const all: Preset[] = raw ? JSON.parse(raw) : [];
+      localStorage.setItem('soundspace_presets', JSON.stringify(all.filter((p) => p.id !== preset.id)));
+      router.push('/presets');
+    } catch {
+      // Ignore storage failures.
+    }
+  };
 
   return (
     <div style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
@@ -16,7 +81,7 @@ export default function PresetDetail({ params }: { params: { id: string } }) {
         <p style={{ fontSize: 15, color: 'var(--ios-label3)', marginBottom: 24 }}>{preset.description}</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-          {preset.mix.map(entry => {
+          {preset.mix.map((entry) => {
             const sound = getSoundById(entry.soundId);
             if (!sound) return null;
             return (
@@ -39,8 +104,30 @@ export default function PresetDetail({ params }: { params: { id: string } }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button style={{ flex: 1, padding: 14, borderRadius: 12, fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'var(--ios-blue)', color: '#fff' }}>▶ Play Mix</button>
-          <button style={{ padding: 14, borderRadius: 12, fontSize: 15, fontWeight: 600, border: '1px solid var(--ios-sep)', cursor: 'pointer', background: 'var(--ios-bg2)', color: 'var(--ios-label)' }}>Edit</button>
+          <button
+            onClick={togglePlay}
+            style={{
+              flex: 1, padding: 14, borderRadius: 12, fontSize: 15, fontWeight: 600,
+              border: 'none', cursor: 'pointer',
+              background: playing ? 'var(--ios-red)' : 'var(--ios-blue)',
+              color: '#fff',
+            }}
+          >
+            {playing ? '■ Stop Mix' : '▶ Play Mix'}
+          </button>
+          {!preset.isCommunity && (
+            <button
+              onClick={removeIfCustom}
+              style={{
+                padding: 14, borderRadius: 12, fontSize: 15, fontWeight: 600,
+                border: '1px solid var(--ios-sep)', cursor: 'pointer',
+                background: 'var(--ios-bg2)', color: 'var(--ios-red)',
+              }}
+              aria-label={`Delete ${preset.name}`}
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
     </div>

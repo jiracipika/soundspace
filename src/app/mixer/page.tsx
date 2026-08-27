@@ -39,17 +39,14 @@ export default function Mixer() {
         next[id] = 0.6;
         engine.start(id, 0.6);
       }
+      // Session starts when the first sound goes live; checked against the
+      // post-toggle snapshot so the very first toggle counts.
+      if (Object.keys(next).length > 0) {
+        setSessionStart(current => current ?? Date.now());
+      }
       return next;
     });
-    // Track session start
-    setSessionStart(prev => {
-      const hasActive = Object.keys(active).length > 0 || nextHasActive;
-      return prev ?? Date.now();
-    });
   }, []);
-
-  // Helper to check if any sound is active after toggle
-  const nextHasActive = true; // simplified; active state tracks this
 
   const setVolume = useCallback((id: string, vol: number) => {
     const engine = getAudioEngine();

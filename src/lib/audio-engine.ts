@@ -278,6 +278,7 @@ class AudioEngine {
     const notes = [261.63, 329.63, 392.0, 523.25, 659.25]; // C4 E4 G4 C5 E5
     let stopped = false;
     let noteIndex = 0;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
 
     const playNote = () => {
       if (stopped) return;
@@ -295,13 +296,17 @@ class AudioEngine {
       osc.start();
       osc.stop(ctx.currentTime + 2.6);
       const next = 2000 + Math.random() * 3000;
-      setTimeout(playNote, next);
+      timerId = setTimeout(playNote, next);
     };
     playNote();
 
     return {
       gainNode, stopFn: () => {
         stopped = true;
+        // Cancel the scheduled note chain — previously it kept firing and
+        // re-scheduling itself forever after stop.
+        if (timerId !== null) clearTimeout(timerId);
+        timerId = null;
       }
     };
   }
