@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Minimal Web Audio mock ─────────────────────────────────────────────
 // The engine only touches: ctx.state/currentTime/resume, createGain,
@@ -133,5 +133,57 @@ describe('AudioEngine', () => {
     const engine = getAudioEngine();
     engine.start('rain');
     expect(audioCtx.resume).toHaveBeenCalled();
+  });
+});
+
+describe('AudioEngine fades', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('fadeOutAndStop ramps the gain to zero, then stops the sound', () => {
+    vi.useFakeTimers();
+    const engine = getAudioEngine();
+    engine.start('rain');
+    engine.fadeOutAndStop('rain', 30);
+    const ramped = nodeLog.some((n) =>
+      n.gain.linearRampToValueAtTime.mock.calls.some(
+        ([target, at]) => target === 0 && Math.abs(at - (audioCtx.currentTime + 30)) < 1e-6,
+      ),
+    );
+    expect(ramped).toBe(true);
+    expect(engine.isPlaying('rain')).toBe(true); // still audible inside the fade window
+    vi.advanceTimersByTime(30_000);
+    expect(engine.isPlaying('rain')).toBe(false);
+  });
+
+  it('fadeOutAndStop on an unknown or already-stopped sound is a no-op', () => {
+    const engine = getAudioEngine();
+    expect(() => engine.fadeOutAndStop('rain', 5)).not.toThrow(); // ctx not even created yet
+    engine.start('rain');
+    engine.stop('rain');
+    expect(() => engine.fadeOutAndStop('rain', 5)).not.toThrow();
+  });
+
+  it('stopAllWithFade fades out every active sound', () => {
+    vi.useFakeTimers();
+    const engine = getAudioEngine();
+    engine.start('rain');
+    engine.start('white');
+    engine.stopAllWithFade(10);
+    expect(engine.isPlaying('rain')).toBe(true);
+    expect(engine.isPlaying('white')).toBe(true);
+    vi.advanceTimersByTime(10_000);
+    expect(engine.isPlaying('rain')).toBe(false);
+    expect(engine.isPlaying('white')).toBe(false);
+  });
+
+  it('a sound restarted during its fade window survives the pending stop', () => {
+    vi.useFakeTimers();
+    const engine = getAudioEngine();
+    engine.start('rain');
+    engine.fadeOutAndStop('rain', 5);
+    engine.stop('rain'); // user changes their mind...
+    engine.start('rain'); // ...and starts it again
+    vi.advanceTimersByTime(5_000);
+    expect(engine.isPlaying('rain')).toBe(true);
   });
 });

@@ -13,6 +13,7 @@ export default function Mixer() {
   const [saveName, setSaveName] = useState('');
   const [showSave, setShowSave] = useState(false);
   const [sessionStart, setSessionStart] = useState<number | null>(null);
+  const [sleepFadeMin, setSleepFadeMin] = useState<number | null>(null);
 
   // Wire master volume to audio engine
   useEffect(() => {
@@ -76,10 +77,7 @@ export default function Mixer() {
   // Log session to history when all sounds stop
   const activeSounds = Object.keys(active);
 
-  const stopAll = () => {
-    const engine = getAudioEngine();
-    engine.stopAll();
-    // Record history if we had a session
+  const endSession = useCallback(() => {
     if (sessionStart && activeSounds.length > 0) {
       const mix: MixEntry[] = Object.entries(active).map(([soundId, volume]) => ({ soundId, volume }));
       addHistoryEntry({
@@ -93,7 +91,35 @@ export default function Mixer() {
     }
     setActive({});
     setSessionStart(null);
+  }, [active, sessionStart, activeSounds.length]);
+
+  const stopAll = () => {
+    getAudioEngine().stopAll();
+    endSession();
   };
+
+  const startSleepFade = useCallback((minutes: number) => {
+    getAudioEngine().stopAllWithFade(minutes * 60);
+    setSleepFadeMin(minutes);
+  }, []);
+
+  const cancelSleepFade = useCallback(() => {
+    const engine = getAudioEngine();
+    // Ramp every still-active sound back up to its slider volume.
+    for (const [id, volume] of Object.entries(active)) engine.setVolume(id, volume);
+    setSleepFadeMin(null);
+  }, [active]);
+
+  // Mirror the engine's fade in the UI: when the fade window ends, log the
+  // session and clear the mix. Cancelling clears this timer via cleanup.
+  useEffect(() => {
+    if (sleepFadeMin === null) return;
+    const t = setTimeout(() => {
+      endSession();
+      setSleepFadeMin(null);
+    }, sleepFadeMin * 60 * 1000);
+    return () => clearTimeout(t);
+  }, [sleepFadeMin, endSession]);
 
   return (
     <div style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
@@ -134,6 +160,35 @@ export default function Mixer() {
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ios-blue)' }}>{Math.round(master * 100)}%</span>
           </div>
           <input type="range" min={0} max={1} step={0.01} value={master} onChange={e => setMaster(+e.target.value)} style={{ width: '100%' }} aria-label="Master volume" />
+        </div>
+
+        {/* Sleep fade */}
+        <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ios-label2)' }}>Sleep Fade</span>
+            {sleepFadeMin !== null && (
+              <button onClick={cancelSleepFade} style={{
+                padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--ios-sep)', background: 'var(--ios-bg)', color: 'var(--ios-label)',
+              }}>Cancel</button>
+            )}
+          </div>
+          {sleepFadeMin !== null ? (
+            <p role="status" style={{ fontSize: 13, color: 'var(--ios-blue)' }}>
+              Current mix fades to silence over {sleepFadeMin} min.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[5, 15, 30, 60].map(min => (
+                <button key={min} disabled={activeSounds.length === 0} onClick={() => startSleepFade(min)} aria-label={`Fade all sounds out over ${min} minutes`} style={{
+                  padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  cursor: activeSounds.length ? 'pointer' : 'default',
+                  border: '1px solid var(--ios-sep)', background: 'var(--ios-bg)',
+                  color: activeSounds.length ? 'var(--ios-blue)' : 'var(--ios-label3)',
+                }}>{min} min</button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Sound grid */}

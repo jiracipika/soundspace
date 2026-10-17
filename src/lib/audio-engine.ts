@@ -378,6 +378,28 @@ class AudioEngine {
   stopAll(): void {
     this.activeSounds.forEach((_, id) => this.stop(id));
   }
+
+  /**
+   * Ramp a playing sound to silence over `seconds`, then stop it. A sound
+   * restarted during the fade window keeps playing: the pending stop only
+   * fires for the sound instance that was actually fading.
+   */
+  fadeOutAndStop(soundId: string, seconds: number): void {
+    const sound = this.activeSounds.get(soundId);
+    if (!sound || !this.ctx) return;
+    const duration = Math.max(0.1, seconds);
+    sound.gainNode.gain.linearRampToValueAtTime(0, this.ctx.currentTime + duration);
+    setTimeout(() => {
+      if (this.activeSounds.get(soundId) === sound) this.stop(soundId);
+    }, duration * 1000);
+  }
+
+  /** Sleep timer: fade every currently active sound out over `seconds`. */
+  stopAllWithFade(seconds: number): void {
+    for (const id of Array.from(this.activeSounds.keys())) {
+      this.fadeOutAndStop(id, seconds);
+    }
+  }
 }
 
 // Singleton
