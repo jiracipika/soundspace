@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 
 const FEATURES = [
   { label: 'Sound Mixer', href: '/mixer', icon: '🎛️', desc: 'Mix ambient sounds with individual volume control' },
@@ -18,38 +19,53 @@ export default function Landing() {
         position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 60%)' }} />
-        <div style={{ fontSize: 56, marginBottom: 16, position: 'relative' }}>🎧</div>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-1px', position: 'relative', marginBottom: 8 }}>
-          Soundspace
-        </h1>
-        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', position: 'relative', maxWidth: 400, margin: '0 auto 28px', lineHeight: 1.5 }}>
-          Ambient sounds for deep focus
-        </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', position: 'relative' }}>
-          <Link href="/mixer" style={{
-            height: 48, borderRadius: 14, padding: '0 28px',
-            background: '#1c1c2e', color: '#fff', fontSize: 16, fontWeight: 600,
-            display: 'inline-flex', alignItems: 'center', textDecoration: 'none',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-          }}>
-            Get Started
-          </Link>
-        </div>
+        <motion.div
+          style={{ position: 'relative' }}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', bounce: 0.3, duration: 0.6 }}
+        >
+          <div style={{ fontSize: 56, marginBottom: 16, position: 'relative' }}>🎧</div>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-1px', position: 'relative', marginBottom: 8 }}>
+            Soundspace
+          </h1>
+          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', position: 'relative', maxWidth: 400, margin: '0 auto 28px', lineHeight: 1.5 }}>
+            Ambient sounds for deep focus
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', position: 'relative' }}>
+            <Link href="/mixer" style={{
+              height: 48, borderRadius: 14, padding: '0 28px',
+              background: '#1c1c2e', color: '#fff', fontSize: 16, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+            }}>
+              Get Started
+            </Link>
+          </div>
+        </motion.div>
       </div>
 
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 16px' }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.4px', marginBottom: 20, color: 'var(--ios-label)' }}>Features</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-          {FEATURES.map(f => (
-            <Link key={f.href} href={f.href} style={{
-              padding: 20, borderRadius: 16, background: 'var(--ios-bg2)',
-              boxShadow: 'var(--ios-shadow)',
-              textDecoration: 'none', transition: 'transform 0.2s ease',
-            }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>{f.icon}</div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ios-label)', marginBottom: 4 }}>{f.label}</div>
-              <div style={{ fontSize: 13, color: 'var(--ios-label3)', lineHeight: 1.4 }}>{f.desc}</div>
-            </Link>
+          {FEATURES.map((f, i) => (
+            <motion.div
+              key={f.href}
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', bounce: 0.3, duration: 0.6, delay: 0.15 + i * 0.06 }}
+              whileHover={{ y: -4, transition: { type: 'spring', bounce: 0.4, duration: 0.35 } }}
+            >
+              <Link href={f.href} style={{
+                padding: 20, borderRadius: 16, background: 'var(--ios-bg2)',
+                boxShadow: 'var(--ios-shadow)',
+                textDecoration: 'none', transition: 'transform 0.2s ease', display: 'block',
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>{f.icon}</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ios-label)', marginBottom: 4 }}>{f.label}</div>
+                <div style={{ fontSize: 13, color: 'var(--ios-label3)', lineHeight: 1.4 }}>{f.desc}</div>
+              </Link>
+            </motion.div>
           ))}
         </div>
       </div>

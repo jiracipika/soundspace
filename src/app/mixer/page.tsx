@@ -1,11 +1,15 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { motion, useReducedMotion } from 'motion/react';
 import { SOUNDS, getSoundById } from '../../lib/sounds';
 import { savePreset, addHistoryEntry } from '../../lib/storage';
 import type { Preset } from '../../lib/types';
 import { getAudioEngine } from '../../lib/audio-engine';
 import type { MixEntry } from '../../lib/types';
+
+// House default: soft spring used for entrance + interaction feedback.
+const spring = { type: 'spring', bounce: 0.3, duration: 0.6 } as const;
 
 export default function Mixer() {
   const [active, setActive] = useState<Record<string, number>>({});
@@ -14,6 +18,7 @@ export default function Mixer() {
   const [showSave, setShowSave] = useState(false);
   const [sessionStart, setSessionStart] = useState<number | null>(null);
   const [sleepFadeMin, setSleepFadeMin] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion();
 
   // Wire master volume to audio engine
   useEffect(() => {
@@ -145,32 +150,61 @@ export default function Mixer() {
         </div>
 
         {showSave && (
-          <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20, display: 'flex', gap: 8 }}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20, display: 'flex', gap: 8 }}
+          >
             <input type="text" value={saveName} onChange={e => setSaveName(e.target.value)} placeholder="Preset name..." onKeyDown={e => { if (e.key === 'Enter') handleSave(); }} style={{
               flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--ios-sep)', fontSize: 14, background: 'var(--ios-bg)', color: 'var(--ios-label)',
               }} autoFocus aria-label="Preset name" />
             <button onClick={handleSave} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'var(--ios-green)', color: '#fff' }}>Save</button>
-          </div>
+          </motion.div>
         )}
 
-        {/* Master volume */}
-        <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20 }}>
+        {/* Master volume — settings surface, fade-only entrance so the range
+            input's geometry is never animated. */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20 }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ios-label2)' }}>Master Volume</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ios-blue)' }}>{Math.round(master * 100)}%</span>
           </div>
           <input type="range" min={0} max={1} step={0.01} value={master} onChange={e => setMaster(+e.target.value)} style={{ width: '100%' }} aria-label="Master volume" />
-        </div>
+        </motion.div>
 
-        {/* Sleep fade */}
-        <div style={{ padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20 }}>
+        {/* Sleep fade — spring entrance; while a fade is pending a soft blue
+            glow gently pulses (opacity mirror loop, skipped for
+            prefers-reduced-motion) so the pending state feels alive. */}
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...spring, delay: 0.1 }}
+          style={{ position: 'relative', padding: 16, borderRadius: 14, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)', marginBottom: 20 }}
+        >
+          {sleepFadeMin !== null && !reduceMotion && (
+            <motion.div
+              aria-hidden
+              style={{
+                position: 'absolute', inset: -1, borderRadius: 14, pointerEvents: 'none',
+                boxShadow: '0 0 22px rgba(10,132,255,0.55)',
+              }}
+              animate={{ opacity: [0.2, 0.65] }}
+              transition={{ duration: 2.2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            />
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ios-label2)' }}>Sleep Fade</span>
             {sleepFadeMin !== null && (
-              <button onClick={cancelSleepFade} style={{
+              <motion.button whileTap={{ scale: 0.92 }} onClick={cancelSleepFade} style={{
                 padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 border: '1px solid var(--ios-sep)', background: 'var(--ios-bg)', color: 'var(--ios-label)',
-              }}>Cancel</button>
+              }}>Cancel</motion.button>
             )}
           </div>
           {sleepFadeMin !== null ? (
@@ -180,28 +214,43 @@ export default function Mixer() {
           ) : (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {[5, 15, 30, 60].map(min => (
-                <button key={min} disabled={activeSounds.length === 0} onClick={() => startSleepFade(min)} aria-label={`Fade all sounds out over ${min} minutes`} style={{
-                  padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                  cursor: activeSounds.length ? 'pointer' : 'default',
-                  border: '1px solid var(--ios-sep)', background: 'var(--ios-bg)',
-                  color: activeSounds.length ? 'var(--ios-blue)' : 'var(--ios-label3)',
-                }}>{min} min</button>
+                <motion.button
+                  key={min}
+                  whileTap={activeSounds.length ? { scale: 0.92 } : undefined}
+                  disabled={activeSounds.length === 0}
+                  onClick={() => startSleepFade(min)}
+                  aria-label={`Fade all sounds out over ${min} minutes`}
+                  style={{
+                    padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                    cursor: activeSounds.length ? 'pointer' : 'default',
+                    border: '1px solid var(--ios-sep)', background: 'var(--ios-bg)',
+                    color: activeSounds.length ? 'var(--ios-blue)' : 'var(--ios-label3)',
+                  }}
+                >{min} min</motion.button>
               ))}
             </div>
           )}
-        </div>
+        </motion.div>
 
-        {/* Sound grid */}
+        {/* Sound grid — spring entrance stagger on mount, hover lift,
+            press feedback on the play toggle (cards toggle sounds). */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-          {SOUNDS.map(sound => {
+          {SOUNDS.map((sound, index) => {
             const isActive = active[sound.id] !== undefined;
             const volume = active[sound.id] ?? 0;
             return (
-              <div key={sound.id} style={{
-                padding: 20, borderRadius: 16, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)',
-                border: isActive ? '2px solid var(--ios-blue)' : '2px solid transparent',
-                transition: 'border-color 0.2s',
-              }}>
+              <motion.div
+                key={sound.id}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring, delay: index * 0.045 }}
+                whileHover={{ y: -4, transition: { type: 'spring', bounce: 0.4, duration: 0.35 } }}
+                style={{
+                  padding: 20, borderRadius: 16, background: 'var(--ios-bg2)', boxShadow: 'var(--ios-shadow)',
+                  border: isActive ? '2px solid var(--ios-blue)' : '2px solid transparent',
+                  transition: 'border-color 0.2s',
+                }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{
                     width: 48, height: 48, borderRadius: 14,
@@ -212,23 +261,32 @@ export default function Mixer() {
                   }}>
                     {sound.emoji}
                   </div>
-                  <button onClick={() => toggle(sound.id)} aria-label={isActive ? `Stop ${sound.name}` : `Play ${sound.name}`} style={{
-                    width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                    background: isActive ? 'var(--ios-blue)' : 'var(--ios-bg)', color: isActive ? '#fff' : 'var(--ios-label3)',
-                    fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{isActive ? '⏸' : '▶'}</button>
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => toggle(sound.id)}
+                    aria-label={isActive ? `Stop ${sound.name}` : `Play ${sound.name}`}
+                    style={{
+                      width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                      background: isActive ? 'var(--ios-blue)' : 'var(--ios-bg)', color: isActive ? '#fff' : 'var(--ios-label3)',
+                      fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >{isActive ? '⏸' : '▶'}</motion.button>
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ios-label)', marginBottom: 8 }}>{sound.name}</div>
                 {isActive && (
-                  <div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.35 }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 11, color: 'var(--ios-label3)' }}>Volume</span>
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ios-blue)' }}>{Math.round(volume * 100)}%</span>
                     </div>
                     <input type="range" min={0} max={1} step={0.01} value={volume} onChange={e => setVolume(sound.id, +e.target.value)} style={{ width: '100%' }} aria-label={`${sound.name} volume`} />
-                  </div>
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
         </div>
