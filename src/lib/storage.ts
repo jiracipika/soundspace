@@ -1,4 +1,4 @@
-import type { Preset, HistoryEntry, MixerState } from './types';
+import type { Preset, HistoryEntry, MixerState, MixEntry } from './types';
 
 const KEYS = {
   PRESETS: 'soundspace_presets',
@@ -67,4 +67,71 @@ export function getMixerState(): MixerState | null {
 
 export function saveMixerState(state: MixerState): void {
   safeSet(KEYS.MIXER, state);
+}
+
+// Preset export / import
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+}
+
+function isValidPreset(value: unknown): value is Preset {
+  if (!value || typeof value !== 'object') return false;
+  const p = value as Preset;
+  return (
+    typeof p.id === 'string' &&
+    p.id.length > 0 &&
+    typeof p.name === 'string' &&
+    Array.isArray(p.mix) &&
+    p.mix.every(
+      (m) =>
+        !!m &&
+        typeof m === 'object' &&
+        typeof (m as MixEntry).soundId === 'string' &&
+        typeof (m as MixEntry).volume === 'number',
+    )
+  );
+}
+
+/** Serialize all saved presets to pretty-printed JSON for backup/sharing. */
+export function exportPresets(): string {
+  return JSON.stringify(getPresets(), null, 2);
+}
+
+/**
+ * Merge presets from exported JSON (accepts a bare array or a single
+ * preset object). Valid presets whose id is not already stored are added
+ * newest-first; everything else counts as skipped. Never overwrites and
+ * never throws — a bad payload simply imports nothing.
+ */
+export function importPresets(raw: string): ImportResult {
+  if (typeof window === 'undefined') return { imported: 0, skipped: 0 };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { imported: 0, skipped: 0 };
+  }
+  const incoming = Array.isArray(parsed) ? parsed : [parsed];
+  const existing = getPresets();
+  const knownIds = new Set(existing.map((p) => p.id));
+  const toAdd: Preset[] = [];
+  let skipped = 0;
+  for (const item of incoming) {
+    if (!isValidPreset(item) || knownIds.has(item.id)) {
+      skipped++;
+      continue;
+    }
+    knownIds.add(item.id);
+    toAdd.push({
+      ...item,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now(),
+    });
+  }
+  if (toAdd.length > 0) {
+    safeSet(KEYS.PRESETS, [...toAdd, ...existing]);
+  }
+  return { imported: toAdd.length, skipped };
 }
